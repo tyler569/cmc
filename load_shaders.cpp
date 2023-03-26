@@ -1,5 +1,3 @@
-#define GL_SILENCE_DEPRECATION
-
 #include <GL/glew.h>
 #include <OpenGL/OpenGL.h>
 #include <iostream>
