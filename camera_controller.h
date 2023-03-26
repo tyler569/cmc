@@ -6,7 +6,7 @@
 #include <fmt/core.h>
 
 struct CameraController {
-    glm::vec3 initialPosition = glm::vec3(0.f, 5.f, 0.f);
+    constexpr static glm::vec3 initialPosition = glm::vec3(0.f, 5.f, 0.f);
     glm::vec3 position = initialPosition;
     glm::vec3 direction;
     glm::vec3 right;
@@ -14,41 +14,47 @@ struct CameraController {
     float horizontalAngle = 0.f;
     float verticalAngle = 0.f;
     float fov = 45.f;
-    float speed = 3.f;
-    float mouseSpeed = 0.05f;
+    float speed = 5.f;
+    float mouseSpeed = 0.07f;
     double lastTime;
+    bool mouseCapture = true;
+    GLFWwindow *window;
 
-    void update(GLFWwindow *window) {
+    CameraController(GLFWwindow *window) : window(window) {}
+
+    void update() {
         double currentTime = glfwGetTime();
         float deltaTime = currentTime - lastTime;
         lastTime = currentTime;
 
-        double x, y;
-        glfwGetCursorPos(window, &x, &y);
+        if (mouseCapture) {
+            double x, y;
+            glfwGetCursorPos(window, &x, &y);
 
-        int xWindow, yWindow;
-        glfwGetWindowSize(window, &xWindow, &yWindow);
-        glfwSetCursorPos(window, xWindow / 2., yWindow / 2.);
+            int xWindow, yWindow;
+            glfwGetWindowSize(window, &xWindow, &yWindow);
+            glfwSetCursorPos(window, xWindow / 2., yWindow / 2.);
 
-        float cursorXDelta = xWindow / 2. - x;
-        float cursorYDelta = yWindow / 2. - y;
+            float cursorXDelta = xWindow / 2. - x;
+            float cursorYDelta = yWindow / 2. - y;
 
-        horizontalAngle += mouseSpeed * deltaTime * cursorXDelta;
-        verticalAngle += mouseSpeed * deltaTime * cursorYDelta;
+            horizontalAngle += mouseSpeed * deltaTime * cursorXDelta;
+            verticalAngle += mouseSpeed * deltaTime * cursorYDelta;
 
-        direction = glm::vec3(
-            cos(verticalAngle) * sin(horizontalAngle),
-            sin(verticalAngle),
-            cos(verticalAngle) * cos(horizontalAngle)
-        );
+            direction = glm::vec3(
+                cos(verticalAngle) * sin(horizontalAngle),
+                sin(verticalAngle),
+                cos(verticalAngle) * cos(horizontalAngle)
+            );
 
-        right = glm::vec3(
-            sin(horizontalAngle - M_PI / 2.),
-            0,
-            cos(horizontalAngle - M_PI / 2.)
-        );
+            right = glm::vec3(
+                sin(horizontalAngle - M_PI / 2.),
+                0,
+                cos(horizontalAngle - M_PI / 2.)
+            );
 
-        up = glm::cross(right, direction);
+            up = glm::cross(right, direction);
+        }
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
             position += direction * deltaTime * speed;
@@ -75,13 +81,23 @@ struct CameraController {
         }
     }
 
-    glm::mat4 vp(GLFWwindow *window) const {
+    void uncaptureMouse() {
+        mouseCapture = false;
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    }
+
+    void captureMouse() {
+        mouseCapture = true;
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+    }
+
+    glm::mat4 vp() const {
         int w, h;
         glfwGetWindowSize(window, &w, &h);
 
         auto projection = glm::perspective(
             glm::radians(fov),
-            (float)w / (float)(h),
+            (float)w / (float)h,
             0.1f,
             100.f
         );

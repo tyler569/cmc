@@ -58,9 +58,9 @@ int main() {
     glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertexBufferData), vertexBufferData, GL_STATIC_DRAW);
 
-    GLuint color_buffer;
-    glGenBuffers(1, &color_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, color_buffer);
+    GLuint colorBuffer;
+    glGenBuffers(1, &colorBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(colorBufferData), colorBufferData, GL_STATIC_DRAW);
     // }
 
@@ -86,21 +86,20 @@ int main() {
         glfwPollEvents();
     }
 
-    CameraController controller{};
+    CameraController controller{window};
 
     do {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        controller.update(window);
-        auto vp = controller.vp(window);
+        controller.update();
+        auto vp = controller.vp();
 
         auto model_base = glm::mat4(1.f);
 
         for (int x = -10; x <= 10; x += 1) {
             for (int y = -10; y <= 10; y += 1) {
-                auto model = glm::translate(model_base, glm::vec3(x * 5, 0.f, y * 5));
-                model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.f, 1.f, 0.f));
-                renderModel(window, shaderProgram, vertexBuffer, color_buffer, vp, model);
+                auto model = glm::translate(model_base, glm::vec3(x, 0, y));
+                renderModel(window, shaderProgram, vertexBuffer, colorBuffer, vp, model);
             }
         }
 
@@ -109,8 +108,8 @@ int main() {
     } while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && !glfwWindowShouldClose(window));
 }
 
-void renderModel(GLFWwindow *window, GLuint shader_program, GLuint vertex_buffer, GLuint color_buffer, glm::mat4& vp, glm::mat4& model) {
-    glUseProgram(shader_program);
+void renderModel(GLFWwindow *window, GLuint shaderProgram, GLuint vertexBuffer, GLuint colorBuffer, glm::mat4& vp, glm::mat4& model) {
+    glUseProgram(shaderProgram);
 
     int width, height;
     glfwGetWindowSize(window, &width, &height);
@@ -118,15 +117,15 @@ void renderModel(GLFWwindow *window, GLuint shader_program, GLuint vertex_buffer
 
     glm::mat4 mvp = vp * model;
 
-    GLuint matrix_id = glGetUniformLocation(shader_program, "MVP");
+    GLuint matrix_id = glGetUniformLocation(shaderProgram, "MVP");
     glUniformMatrix4fv(matrix_id, 1, GL_FALSE, &mvp[0][0]);
 
     glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
     glEnableVertexAttribArray(1);
-    glBindBuffer(GL_ARRAY_BUFFER, color_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
     glDrawArrays(GL_TRIANGLES, 0, 12*3);
