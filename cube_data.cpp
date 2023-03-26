@@ -1,6 +1,6 @@
 #include <OpenGL/OpenGL.h>
 
-static constexpr GLfloat vertex_buffer_data[] = {
+static constexpr GLfloat vertexBufferData[] = {
     -1.0f,-1.0f,-1.0f, // triangle 1 : begin
     -1.0f,-1.0f, 1.0f,
     -1.0f, 1.0f, 1.0f, // triangle 1 : end
@@ -39,7 +39,7 @@ static constexpr GLfloat vertex_buffer_data[] = {
     1.0f,-1.0f, 1.0f
 };
 
-static constexpr GLfloat color_buffer_data[] = {
+static constexpr GLfloat colorBufferData[] = {
     0.583f,  0.771f,  0.014f,
     0.609f,  0.115f,  0.436f,
     0.327f,  0.483f,  0.844f,
