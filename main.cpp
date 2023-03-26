@@ -18,6 +18,8 @@ using std::string;
 void error_exit(string message);
 bool glfw_started = false;
 
+int frame = 0;
+
 void render_model(GLFWwindow *, GLuint, GLuint, GLuint);
 
 int main() {
@@ -70,7 +72,7 @@ int main() {
     glClearColor(0.1, 0.2, 0.3, 1.);
 
     do {
-        GLFWvidmode video_info;
+        frame++;
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -95,6 +97,7 @@ void render_model(GLFWwindow *window, GLuint shader_program, GLuint vertex_buffe
         glm::vec3(0, 1, 0)
     );
     glm::mat4 model = glm::mat4(1.f);
+    model = glm::rotate(model, (float)frame / 100.f, glm::vec3(0.f, 1.f, 0.f));
     glm::mat4 mvp = projection * view * model;
 
     GLuint matrix_id = glGetUniformLocation(shader_program, "MVP");
