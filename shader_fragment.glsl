@@ -1,9 +1,11 @@
 #version 330 core
+
+in vec2 uv;
+
 out vec3 color;
 
-in vec3 fragmentColor;
+uniform sampler2D textureSampler;
 
 void main() {
-    color = fragmentColor;
-    // color = (1. - gl_FragCoord.zzz) * 20.;
+    color = texture(textureSampler, uv).rgb;
 }

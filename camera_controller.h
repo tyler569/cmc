@@ -6,7 +6,7 @@
 #include <fmt/core.h>
 
 struct CameraController {
-    constexpr static glm::vec3 initialPosition = glm::vec3(0.f, 5.f, 0.f);
+    constexpr static glm::vec3 initialPosition = glm::vec3(0.f, 0.f, -5.f);
     glm::vec3 position = initialPosition;
     glm::vec3 direction;
     glm::vec3 right;

@@ -1,7 +1,10 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.26)
 project(gl VERSION 0.1.0)
 
-add_executable(gl main.cpp load_shaders.cpp)
+add_compile_options(-fsanitize=address)
+add_link_options(-fsanitize=address)
+
+add_executable(gl main.cpp load_shaders.cpp load_bmp.cpp)
 
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
