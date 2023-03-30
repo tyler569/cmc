@@ -6,7 +6,7 @@
 #include <fmt/core.h>
 
 struct CameraController {
-    constexpr static glm::vec3 initialPosition = glm::vec3(0.f, 0.f, -5.f);
+    constexpr static glm::vec3 initialPosition = glm::vec3(15.f, 15.f, -40.f);
     glm::vec3 position = initialPosition;
     glm::vec3 direction;
     glm::vec3 right;
@@ -78,6 +78,10 @@ struct CameraController {
             horizontalAngle = 0.;
             verticalAngle = 0.;
             position = initialPosition;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
+            fmt::print("{} {} {} / {} {}\n", position.x, position.y, position.z, horizontalAngle, verticalAngle);
         }
     }
 
