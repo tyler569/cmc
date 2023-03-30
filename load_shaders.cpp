@@ -20,7 +20,7 @@ GLuint loadShaders(const char *vertexFilePath, const char *fragmentFilePath){
 		vertexShaderCode = sstr.str();
 		vertexShaderStream.close();
 	} else {
-		printf("Impossible to open %s. Are you in the right directory ? Don't forget to read the FAQ !\n", vertexFilePath);
+		printf("Impossible to open %s. Are you in the RIGHT directory ? Don't forget to read the FAQ !\n", vertexFilePath);
 		getchar();
 		return 0;
 	}

@@ -1,13 +1,10 @@
-#include <cstdio>
 #include <cstdlib>
-#include <string>
 #include <iostream>
 #include <vector>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
 #include <fmt/core.h>
 
@@ -24,83 +21,88 @@ bool glfwStarted = false;
 
 void renderModel(GLFWwindow *, GLuint, GLuint, glm::mat4&, glm::mat4&, int);
 
-std::vector<GLfloat> faceUv(int x, int y) {
-    std::vector<GLfloat> faceUv = {};
-    GLfloat xv = x / 16.;
-    GLfloat yv = y / 16.;
-    GLfloat dv = 1. / 16.;
-
-    for (int i = 0; i < 12; i++) {
-        if (i & 1) {
-            faceUv.push_back(yv + dv * cubeUvs[i]);
-        } else {
-            faceUv.push_back(xv + dv * cubeUvs[i]);
-        }
-    }
-
-    return faceUv;
-}
-
-struct vertex {
+struct Vertex {
     float position[3];
     float uv[2];
 };
 
-std::vector<GLfloat> generateMesh() {
-    constexpr GLfloat duv = 1. / 16.;
+std::ostream& operator <<(std::ostream& os, Vertex& v) {
+    os << "{" << v.position[0] << ", " << v.position[1] << ", " << v.position[2] << ", " << v.uv[0] << ", " << v.uv[1] << "}";
+    return os;
+}
 
-    auto emitFront = [](std::vector<GLfloat> &mesh, GLfloat x, GLfloat y, GLfloat z, GLfloat u, GLfloat v) {
-        mesh.insert(mesh.end(), {
-            x, y, z, u, v,
-            x, y+1, z, u, v+duv,
-            x+1, y, z, u+duv, v,
-            x, y+1, z, u, v+duv,
-            x+1, y+1, z, u+duv, v+duv,
-            x+1, y, z, u+duv, v
-        });
+struct Mesh {
+    static constexpr GLfloat duv = 1. / 16.;
+    static constexpr GLfloat faceOffsets[6][18] = {
+        {0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0}, // Front
+        {1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1}, // Back
+        {1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1}, // Right
+        {0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0}, // Left
+        {0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0}, // Top
+        {0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1}, // Bottom
     };
 
-    auto emitRight = [](std::vector<GLfloat> &mesh, GLfloat x, GLfloat y, GLfloat z, GLfloat u, GLfloat v) {
-        mesh.insert(mesh.end(), {
-            x+1, y, z, u, v,
-            x+1, y+1, z, u, v+duv,
-            x+1, y, z+1, u+duv, v,
-            x+1, y+1, z, u, v+duv,
-            x+1, y+1, z+1, u+duv, v+duv,
-            x+1, y, z+1, u+duv, v
-        });
+    static constexpr GLfloat uvOffsets[6][12] = {
+        {1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1}, // Front
+        {1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1}, // Back
+        {1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1}, // Right
+        {1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1}, // Left
+        {1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1}, // Top
+        {1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0}, // Bottom
+
     };
 
-    auto emitBack = [](std::vector<GLfloat> &mesh, GLfloat x, GLfloat y, GLfloat z, GLfloat u, GLfloat v) {
-        mesh.insert(mesh.end(), {
-            x+1, y, z+1, u, v,
-            x+1, y+1, z+1, u, v+duv,
-            x, y, z+1, u+duv, v,
-            x+1, y+1, z+1, u, v+duv,
-            x, y+1, z+1, u+duv, v+duv,
-            x, y, z+1, u+duv, v
-        });
+    enum Face {
+        FRONT,
+        BACK,
+        RIGHT,
+        LEFT,
+        TOP,
+        BOTTOM,
     };
 
-    std::vector<GLfloat> mesh = {};
+    std::vector<Vertex> vertices;
 
-    for (int x = 0; x < 16; x++) {
-        for (int y = 0; y < 16; y++) {
-            emitFront(mesh, x, y, 0, x / 16., y / 16.);
+    void emitFace(Face face, GLfloat x, GLfloat y, GLfloat z, GLfloat u, GLfloat v) {
+        const auto& offsets = faceOffsets[face];
+        const auto& uvs = uvOffsets[face];
+        const float epsilon = 0.001;
+        for (size_t i = 0, j = 0; i < std::size(offsets); i += 3, j += 2) {
+            vertices.push_back(Vertex{
+                {x + offsets[i], y + offsets[i + 1], z + offsets[i + 2]},
+                {u + duv * uvs[j], v + (duv * uvs[j + 1])}
+            });
         }
     }
 
-    // emitFront(mesh, 0, 0, 0, 0, 0);
-    // emitBack(mesh, 0, 0, 0, 0, 0);
-    // emitRight(mesh, 0, 0, 0, 0, 0);
+    [[nodiscard]] size_t dataLen() const {
+        return vertexCount() * sizeof(Vertex);
+    }
 
-    // fmt::print("mesh: ");
-    // for (auto v : mesh) {
-    //     fmt::print("{} ", v);
-    // }
-    // fmt::print("\n");
+    [[nodiscard]] GLfloat *dataPtr() const {
+        return (GLfloat *)&vertices[0];
+    }
 
-    return mesh;
+    [[nodiscard]] size_t vertexCount() const {
+        return vertices.size();
+    }
+};
+
+Mesh generateMesh() {
+    Mesh m = {};
+
+    for (int x = 0; x < 16; x++) {
+        for (int y = 0; y < 16; y++) {
+            m.emitFace(Mesh::FRONT, x * 2, y * 2, 0, x / 16., y / 16.);
+            m.emitFace(Mesh::BACK, x * 2, y * 2, 0, x / 16., y / 16.);
+            m.emitFace(Mesh::TOP, x * 2, y * 2, 0, x / 16., y / 16.);
+            m.emitFace(Mesh::BOTTOM, x * 2, y * 2, 0, x / 16., y / 16.);
+            m.emitFace(Mesh::LEFT, x * 2, y * 2, 0, x / 16., y / 16.);
+            m.emitFace(Mesh::RIGHT, x * 2, y * 2, 0, x / 16., y / 16.);
+        }
+    }
+
+    return m;
 }
 
 int main() {
@@ -130,58 +132,25 @@ int main() {
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 
-    /*
-    std::vector<GLfloat> cube = {};
-    std::vector<GLfloat> cubeColor = {};
-    std::vector<GLfloat> cubeUv = {};
-
-    auto blockUv = faceUv(9, 0);
-
-    for (int i = 0; i < 6; i++) {
-        cube.insert(cube.end(), std::begin(cubeSides[i]), std::end(cubeSides[i]));
-        cubeColor.insert(cubeColor.end(), std::begin(cubeColors[i]), std::end(cubeColors[i]));
-        cubeUv.insert(cubeUv.end(), std::begin(blockUv), std::end(blockUv));
-    }
-
-*/
-    // {
     GLuint vertexArrayId;
     glGenVertexArrays(1, &vertexArrayId);
     glBindVertexArray(vertexArrayId);
-    /*
 
-    GLuint vertexBuffer;
-    glGenBuffers(1, &vertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, cube.size() * sizeof(GLfloat), &cube[0], GL_STATIC_DRAW);
-
-    GLuint colorBuffer;
-    glGenBuffers(1, &colorBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-    glBufferData(GL_ARRAY_BUFFER, cubeColor.size() * sizeof(GLfloat), &cubeColor[0], GL_STATIC_DRAW);
-
-    GLuint uvBuffer;
-    glGenBuffers(1, &uvBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
-    glBufferData(GL_ARRAY_BUFFER, cubeUv.size() * sizeof(GLfloat), &cubeUv[0], GL_STATIC_DRAW);
-    */
-    // }
-
-    std::vector<GLfloat> meshVector = generateMesh();
-    int points = meshVector.size() / 5;
+    auto meshObject = generateMesh();
+    int points = meshObject.vertexCount();
 
     GLuint mesh;
     glGenBuffers(1, &mesh);
     glBindBuffer(GL_ARRAY_BUFFER, mesh);
-    glBufferData(GL_ARRAY_BUFFER, meshVector.size() * sizeof(GLfloat), &meshVector[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, meshObject.dataLen(), meshObject.dataPtr(), GL_STATIC_DRAW);
 
-    GLuint texture = loadBmp("../terrain.bmp");
+    loadBmp("../terrain.png");
 
     GLuint shaderProgram = loadShaders("../shader_vertex.glsl", "../shader_fragment.glsl");
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-    // glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
 
     glClearColor(0.1, 0.2, 0.3, 1.);
 
@@ -202,6 +171,8 @@ int main() {
     CameraController controller{window};
 
     do {
+        auto time = glfwGetTime();
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
@@ -220,11 +191,13 @@ int main() {
         //         auto model = glm::translate(model_base, glm::vec3(x * 2, 0, y * 2));
         //         // model = glm::rotate(model, (float)glfwGetTime() / 10.f, glm::vec3(0, 1, 0));
         //         // model = glm::translate(model, glm::vec3(-0.5, 0, -0.5));
-        //         renderModel(window, shaderProgram, mesh, vp, model);
+        //         renderModel(window, shaderProgram, Mesh, vp, model);
         //     }
         // }
 
         renderModel(window, shaderProgram, mesh, vp, model_base, points);
+
+        // fmt::print("{}\n", (glfwGetTime() - time) * 1000);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

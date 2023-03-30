@@ -2,3 +2,7 @@
 /.vscode
 /build
 /terrain.bmp
+/terrain.png
+/.idea
+/.clangd
+/cmake-build-*
