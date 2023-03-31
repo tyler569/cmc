@@ -56,23 +56,28 @@ struct CameraController {
             up = glm::cross(right, direction);
         }
 
+        float frameSpeed = speed;
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+            frameSpeed *= 3;
+        }
+
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            position += direction * deltaTime * speed;
+            position += direction * deltaTime * frameSpeed;
         }
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            position -= right * deltaTime * speed;
+            position -= right * deltaTime * frameSpeed;
         }
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            position -= direction * deltaTime * speed;
+            position -= direction * deltaTime * frameSpeed;
         }
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            position += right * deltaTime * speed;
+            position += right * deltaTime * frameSpeed;
         }
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-            position += up * deltaTime * speed;
+            position += up * deltaTime * frameSpeed;
         }
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-            position -= up * deltaTime * speed;
+            position -= up * deltaTime * frameSpeed;
         }
         if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
             horizontalAngle = 0.;

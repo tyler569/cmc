@@ -17,6 +17,12 @@ add_compile_definitions(
     GL_SILENCE_DEPRECATION=1
 )
 
-target_compile_options(gl PRIVATE -Wall -Wextra -Werror -Wno-error=unused-variable)
+target_compile_options(gl PRIVATE
+  -Wall
+  -Wextra
+  -Werror
+  -Wno-error=unused-variable
+  -Wno-error=unused-parameter
+)
 
 target_link_libraries(gl OpenGL::GL glfw GLEW::GLEW fmt::fmt)
