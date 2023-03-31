@@ -136,7 +136,7 @@ Mesh generateMesh() {
     }
 #else
     for (int x = 0; x < 16; x++)
-    for (int y = 0; y < 8; y++)
+    for (int y = 0; y < 16; y++)
     for (int z = 0; z < 16; z++) {
         if (chunk[x][y][z] != 0 && (x - 1 < 0 || chunk[x-1][y][z] == 0)) {
             m.emitFace(Mesh::LEFT, x, y, z, chunk[x][y][z]);
@@ -164,7 +164,11 @@ Mesh generateMesh() {
     return m;
 }
 
+int asyncmain();
 int main() {
+    asyncmain();
+    return 0;
+
     std::srand(1);
 
     for (int x = 0; x < 16; x++)
@@ -174,6 +178,8 @@ int main() {
     }
 
     chunk[8][3][8] = 0;
+    chunk[8][8][8] = 23;
+    chunk[8][9][8] = 23;
 
     glewExperimental = true;
 
