@@ -1,12 +1,11 @@
 #include <iostream>
+
 #include <asio.hpp>
 #include <fmt/core.h>
-#include "varint.h"
+
+#include "minecraft/varint.h"
 
 using asio::ip::tcp;
-
-struct handshake {
-};
 
 void writePacket(std::vector<uint8_t> &data, tcp::socket &socket) {
     auto length = data.size();

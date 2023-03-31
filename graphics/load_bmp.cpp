@@ -8,36 +8,18 @@
 
 #include "util.h"
 
-GLuint loadBmp(const char *filename) {
+GLuint loadTextureArray(const char *filename, int tilesX, int tilesY, int tileW, int tileH) {
     int width, height, nChannels;
 
     uint8_t *data = stbi_load(filename, &width, &height, &nChannels, 4);
-#if 0
-    GLuint texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
 
-    stbi_image_free(data);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-#else
     GLuint texture;
 
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D_ARRAY, texture);
     glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA, 16, 16, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
-    int tilesX = 16;
-    int tilesY = 16;
-
-    int tileW = 16;
-    int tileH = 16;
-    int channels = 4;
+    int channels = nChannels;
 
     std::vector<uint8_t> tile(tileW * tileH * channels);
     int tileSizeX = tileW * channels;
@@ -63,7 +45,28 @@ GLuint loadBmp(const char *filename) {
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     stbi_image_free(data);
-#endif
+
+    return texture;
+}
+
+GLuint loadTexture(const char *filename) {
+    int width, height, nChannels;
+
+    uint8_t *data = stbi_load(filename, &width, &height, &nChannels, 4);
+
+    GLuint texture;
+
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    stbi_image_free(data);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     return texture;
 }

@@ -1,6 +1,4 @@
 #include <cstdlib>
-#include <iostream>
-#include <vector>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -11,109 +9,20 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "external/stb_image.h"
 
-#include "camera_controller.h"
-#include "cube_data.cpp"
-#include "load_bmp.h"
-#include "load_shaders.h"
-#include "util.h"
+#include "graphics/camera_controller.h"
+#include "graphics/load_bmp.h"
+#include "graphics/load_shaders.h"
+#include "graphics/mesh.h"
+#include "minecraft/connection.h"
+
+// one of each block / fake chunk
+#define TEXTURE_DEMO 0
+#define ASIO_TEST 1
 
 bool glfwStarted = false;
 
+void errorExit(std::string message);
 void renderModel(GLuint, GLuint, glm::mat4&, glm::mat4&, int);
-void openGlErrorCallback(
-    GLenum source,
-    GLenum type,
-    GLuint id,
-    GLenum severity,
-    GLsizei length,
-    const GLchar *message,
-    const void *userParam
-);
-
-struct Vertex {
-    GLfloat position[3];
-    GLfloat normal[3];
-    GLfloat uv[2];
-    GLfloat textureIndex;
-};
-
-std::ostream& operator <<(std::ostream& os, const Vertex& v) {
-    os << "{"
-        << v.position[0] << ", "
-        << v.position[1] << ", "
-        << v.position[2] << ", "
-        << v.uv[0] << ", "
-        << v.uv[1] << ", "
-        << v.textureIndex << "}";
-    return os;
-}
-
-struct Mesh {
-    static constexpr GLfloat duv = 1.;
-    static constexpr GLfloat faceOffsets[6][18] = {
-        {0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0}, // Front
-        {1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1}, // Back
-        {1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1}, // Right
-        {0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0}, // Left
-        {0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0}, // Top
-        {0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1}, // Bottom
-    };
-
-    static constexpr GLfloat uvOffsets[6][12] = {
-        {1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1}, // Front
-        {1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1}, // Back
-        {1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1}, // Right
-        {1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1}, // Left
-        {1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1}, // Top
-        {1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0}, // Bottom
-    };
-
-    static constexpr GLfloat normals[6][3] = {
-        {-1, 0, 0}, // Front
-        {1, 0, 0},  // Back
-        {0, 0, -1}, // Right
-        {0, 0, 1},  // Left
-        {0, 1, 0},  // Top
-        {0, -1, 0}, // Bottom
-    };
-
-    enum Face {
-        FRONT,
-        BACK,
-        RIGHT,
-        LEFT,
-        TOP,
-        BOTTOM,
-    };
-
-    std::vector<Vertex> vertices;
-
-    void emitFace(Face face, GLfloat x, GLfloat y, GLfloat z, GLfloat index) {
-        const auto& offsets = faceOffsets[face];
-        const auto& uvs = uvOffsets[face];
-        const auto& normal = normals[face];
-        for (size_t i = 0, j = 0; i < std::size(offsets); i += 3, j += 2) {
-            vertices.push_back(Vertex{
-                {x + offsets[i], y + offsets[i + 1], z + offsets[i + 2]},
-                {normal[0], normal[1], normal[2]},
-                {uvs[j], uvs[j + 1]},
-                index,
-            });
-        }
-    }
-
-    [[nodiscard]] size_t dataLen() const {
-        return vertexCount() * sizeof(Vertex);
-    }
-
-    [[nodiscard]] GLfloat *dataPtr() const {
-        return (GLfloat *)&vertices[0];
-    }
-
-    [[nodiscard]] size_t vertexCount() const {
-        return vertices.size();
-    }
-};
 
 uint8_t chunk[16][16][16];
 
@@ -123,7 +32,7 @@ Mesh generateMesh() {
 
     Mesh m = {};
 
-#if 0
+#if TEXTURE_DEMO
     for (int x = 0; x < 16; x++) {
         for (int y = 0; y < 16; y++) {
             m.emitFace(Mesh::FRONT, x * 2, y * 2, 0, y * 16 + x);
@@ -164,10 +73,11 @@ Mesh generateMesh() {
     return m;
 }
 
-int asyncmain();
 int main() {
+#if ASIO_TEST
     asyncmain();
     return 0;
+#endif
 
     std::srand(1);
 
@@ -226,12 +136,10 @@ int main() {
 
     updateMesh();
 
-    loadBmp("../terrain.png");
+    loadTextureArray("../terrain.png", 16, 16, 16, 16);
 
     GLuint shaderProgram = loadShaders("../shader_vertex.glsl", "../shader_fragment.glsl");
 
-    glEnable(GL_DEBUG_OUTPUT);
-    // glDebugMessageCallback(openGlErrorCallback, 0);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glEnable(GL_CULL_FACE);
@@ -320,18 +228,4 @@ void errorExit(std::string message) {
     if (glfwStarted) {
         glfwTerminate();
     }
-}
-
-void openGlErrorCallback(
-    GLenum _source,
-    GLenum type,
-    GLuint _id,
-    GLenum severity,
-    GLsizei _length,
-    const GLchar *message,
-    const void *_userParam
-) {
-    fmt::print(stderr, "GL callback {} type {} severity {} message {}\n",
-        type == GL_DEBUG_TYPE_ERROR ? "ERROR" : "info",
-        type, severity, message);
 }

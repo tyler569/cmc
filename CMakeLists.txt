@@ -6,7 +6,7 @@ include_directories(${CMAKE_SOURCE_DIR})
 add_compile_options(-fsanitize=address)
 add_link_options(-fsanitize=address)
 
-add_executable(gl main.cpp load_shaders.cpp load_bmp.cpp minecraft/connection.cpp minecraft/varint.h minecraft/packet.cpp util/byteswap.cpp util/byteswap.h minecraft/varint.cpp)
+add_executable(gl main.cpp graphics/load_shaders.cpp graphics/load_bmp.cpp minecraft/connection.cpp minecraft/varint.h minecraft/packet.cpp util/byteswap.cpp util/byteswap.h minecraft/varint.cpp graphics/mesh.cpp minecraft/connection.h)
 
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
