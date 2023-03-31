@@ -3,7 +3,6 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-
 #include <fmt/core.h>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -17,20 +16,17 @@
 
 // one of each block / fake chunk
 #define TEXTURE_DEMO 0
-#define ASIO_TEST 1
+#define ASIO_TEST 0
 
 bool glfwStarted = false;
 
 void errorExit(std::string message);
-void renderModel(GLuint, GLuint, glm::mat4&, glm::mat4&, int);
 
 uint8_t chunk[16][16][16];
 
-Mesh generateMesh() {
-
+void generateMesh(Mesh &m) {
     double time = glfwGetTime();
-
-    Mesh m = {};
+    m.vertices.clear();
 
 #if TEXTURE_DEMO
     for (int x = 0; x < 16; x++) {
@@ -68,9 +64,9 @@ Mesh generateMesh() {
     }
 #endif
 
-    fmt::print("mesh generation took {} ms\n", (glfwGetTime() - time) * 1000);
+    m.build();
 
-    return m;
+    fmt::print("mesh generation took {} ms\n", (glfwGetTime() - time) * 1000);
 }
 
 int main() {
@@ -121,22 +117,15 @@ int main() {
     glGenVertexArrays(1, &vertexArrayId);
     glBindVertexArray(vertexArrayId);
 
-    Mesh meshObject;
-    size_t points;
-    GLuint mesh;
-    glGenBuffers(1, &mesh);
+    Mesh mesh;
 
-    auto updateMesh = [&meshObject, &points, mesh]() {
-        meshObject = generateMesh();
-        points = meshObject.vertexCount();
-
-        glBindBuffer(GL_ARRAY_BUFFER, mesh);
-        glBufferData(GL_ARRAY_BUFFER, meshObject.dataLen(), meshObject.dataPtr(), GL_STATIC_DRAW);
+    auto updateMesh = [&mesh]() {
+        generateMesh(mesh);
     };
 
     updateMesh();
 
-    loadTextureArray("../terrain.png", 16, 16, 16, 16);
+    GLuint texture = loadTextureArray("../terrain.png", 16, 16, 16, 16);
 
     GLuint shaderProgram = loadShaders("../shader_vertex.glsl", "../shader_fragment.glsl");
 
@@ -178,7 +167,7 @@ int main() {
 
         auto model_base = glm::mat4(1.f);
 
-        renderModel(shaderProgram, mesh, vp, model_base, points);
+        mesh.render(shaderProgram, texture, vp, model_base);
 
         if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS) {
             chunk[0][0][0] = 0;
@@ -188,38 +177,6 @@ int main() {
         glfwSwapBuffers(window);
         glfwPollEvents();
     } while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && !glfwWindowShouldClose(window));
-}
-
-void renderModel(GLuint shaderProgram, GLuint meshBuffer, glm::mat4& vp, glm::mat4& model, int points) {
-    glUseProgram(shaderProgram);
-
-    glm::mat4 mvp = vp * model;
-
-    GLuint matrixId = glGetUniformLocation(shaderProgram, "MVP");
-    glUniformMatrix4fv(matrixId, 1, GL_FALSE, &mvp[0][0]);
-
-    GLuint timeId = glGetUniformLocation(shaderProgram, "time");
-    glUniform1f(timeId, (float)glfwGetTime());
-
-    glBindBuffer(GL_ARRAY_BUFFER, meshBuffer);
-
-    constexpr size_t stride = sizeof(Vertex);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void *)offsetof(Vertex, position));
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void *)offsetof(Vertex, normal));
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void *)offsetof(Vertex, uv));
-    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, stride, (void *)offsetof(Vertex, textureIndex));
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
-    glEnableVertexAttribArray(3);
-
-    glDrawArrays(GL_TRIANGLES, 0, points);
-
-    glDisableVertexAttribArray(3);
-    glDisableVertexAttribArray(2);
-    glDisableVertexAttribArray(1);
-    glDisableVertexAttribArray(0);
 }
 
 void errorExit(std::string message) {

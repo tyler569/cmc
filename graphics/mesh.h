@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include <glm/glm.hpp>
 #include <GL/glew.h>
 
 struct Vertex {
@@ -52,21 +53,36 @@ struct Mesh {
         BOTTOM,
     };
 
-    std::vector<Vertex> vertices;
+    std::vector<Vertex> vertices{};
+    GLuint buffer{};
 
-    void emitFace(Face face, GLfloat x, GLfloat y, GLfloat z, GLfloat index) {
-        const auto& offsets = faceOffsets[face];
-        const auto& uvs = uvOffsets[face];
-        const auto& normal = normals[face];
-        for (size_t i = 0, j = 0; i < std::size(offsets); i += 3, j += 2) {
-            vertices.push_back(Vertex{
-                {x + offsets[i], y + offsets[i + 1], z + offsets[i + 2]},
-                {normal[0], normal[1], normal[2]},
-                {uvs[j], uvs[j + 1]},
-                index,
-            });
-        }
+    Mesh() {
+        glGenBuffers(1, &buffer);
     }
+
+    Mesh(Mesh &&other) noexcept {
+        vertices = std::move(other.vertices);
+        buffer = other.buffer;
+        other.buffer = 0;
+    }
+
+    ~Mesh() {
+        glDeleteBuffers(1, &buffer);
+    }
+
+    Mesh &operator=(Mesh &) = delete;
+    Mesh &operator=(const Mesh &) = delete;
+
+    Mesh &operator=(Mesh &&other) noexcept {
+        if (this != &other) {
+            buffer = other.buffer;
+            other.buffer = 0;
+            vertices = std::move(other.vertices);
+        }
+        return *this;
+    }
+
+    void emitFace(Face face, GLfloat x, GLfloat y, GLfloat z, GLfloat index);
 
     [[nodiscard]] size_t dataLen() const {
         return vertexCount() * sizeof(Vertex);
@@ -79,6 +95,13 @@ struct Mesh {
     [[nodiscard]] size_t vertexCount() const {
         return vertices.size();
     }
+
+    void build() const {
+        glBindBuffer(GL_ARRAY_BUFFER, buffer);
+        glBufferData(GL_ARRAY_BUFFER, dataLen(), dataPtr(), GL_STATIC_DRAW);
+    }
+
+    void render(GLuint shaderProgram, GLuint texture, glm::mat4 &mv, glm::mat4 &p) const;
 };
 
 #endif
