@@ -1,32 +1,22 @@
-#include <bit>
-#include <cstdint>
-#include <string>
-#include <vector>
-#include "minecraft/varint.h"
-#include "util/byteswap.h"
+#include "minecraft/packet.h"
+#include "util/dump.h"
 
-struct packet {
-    int id;
-};
+void testPacket() {
+    std::vector<uint8_t> data{};
+    auto ser = packetSerializer{data};
+    ser.writeVarint(-2356);
+    ser.write(3.4f);
+    ser.write(0x12345678);
+    ser.write(3.4);
+    ser.write(std::string_view("Hello World"));
 
-struct packetSerializer {
-    std::vector<uint8_t> data;
+    dump(data);
 
-    void writeVarint(int i) {
-        ::writeVarint(i, data);
-    }
-
-    void writeShort(short i) {
-        auto value = byteswap(static_cast<uint32_t>(i));
-    }
-
-    void writeString(const std::string &str) {
-        writeVarint(str.size());
-        data.insert(data.end(), str.begin(), str.end());
-    }
-
-    void writeFloat(float f) {
-        auto v = reinterpret_cast<uint32_t *>(&f);
-        auto value = byteswap(*v);
-    }
-};
+    auto deser = packetDeserializer{data};
+    auto a = deser.readVarint();
+    auto b = deser.read<float>();
+    auto x = deser.read<int>();
+    auto c = deser.read<double>();
+    auto d = deser.read<std::string>();
+    fmt::print("{} {} {} {} {}\n", a, b, x, c, d);
+}

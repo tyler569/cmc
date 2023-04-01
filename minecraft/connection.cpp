@@ -2,16 +2,26 @@
 
 #include <asio.hpp>
 #include <fmt/core.h>
+#include <openssl/aes.h>
+#include <openssl/rsa.h>
+#include <openssl/x509.h>
 
+#include "minecraft/packet.h"
 #include "minecraft/varint.h"
+#include "util/dump.h"
 
 using asio::ip::tcp;
+
+constexpr std::string_view serverName = "localhost";
 
 void writePacket(std::vector<uint8_t> &data, tcp::socket &socket) {
     auto length = data.size();
     std::vector<uint8_t> packet = {};
     writeVarint(length, packet);
     packet.insert(packet.end(), data.begin(), data.end());
+
+    fmt::print("<<\n");
+    dump(packet);
 
     asio::error_code error;
     asio::write(socket, asio::buffer(packet), error);
@@ -22,32 +32,36 @@ void writePacket(std::vector<uint8_t> &data, tcp::socket &socket) {
 
 void writePing(tcp::socket &socket) {
     std::vector<uint8_t> packet = {};
-    // handshake
-    writeVarint(0, packet);
-    // protocol version 758, 1.18.2
-    writeVarint(758, packet);
-    // server address (empty)
-    writeVarint(0, packet);
-    // server port (0u16)
-    packet.push_back(0);
-    packet.push_back(0);
-    // next state: status
-    writeVarint(1, packet);
-
-    writePacket(packet, socket);
-
+    {
+        auto ser = packetSerializer{packet};
+        // handshake type
+        ser.writeVarint(0);
+        // protocol version
+        ser.writeVarint(758);
+        // server address
+        ser.write(serverName);
+        // server port
+        ser.write((short) 25565);
+        // next state: status
+        ser.writeVarint(1);
+        writePacket(packet, socket);
+    }
     packet.clear();
-    // status request
-    writeVarint(0, packet);
-    writePacket(packet, socket);
+    {
+        auto ser = packetSerializer{packet};
+        // status request
+        ser.writeVarint(0);
+        writePacket(packet, socket);
+    }
 }
 
 int asyncmain() {
+
     asio::io_context io;
     tcp::resolver resolver(io);
     tcp::resolver::results_type endpoints;
     try {
-        endpoints = resolver.resolve("mc.openredstone.org", "25565");
+        endpoints = resolver.resolve(serverName, "25565");
     } catch (std::exception &e) {
         std::cerr << e.what() << std::endl;
         std::exit(1);
@@ -74,17 +88,18 @@ int asyncmain() {
             throw asio::system_error(error);
         }
 
-        auto it = data.begin();
-        auto packetLength = readVarint(it);
-        fmt::print("packet length: {}\n", packetLength);
-        auto packetId = readVarint(it);
-        fmt::print("packet ID:     {}\n", packetId);
-        auto stringLength = readVarint(it);
-        fmt::print("string length: {}\n", stringLength);
-        for (int i = 0; i < stringLength; i++) {
-            printf("%c", *it++);
+        data.resize(len);
+
+        fmt::print(">>\n");
+        dump(data);
+
+        auto deser = packetDeserializer{data};
+        auto packetLength = deser.readVarint();
+        auto packetId = deser.readVarint();
+        if (packetId == 0) {
+            auto string = deser.read<std::string>();
+            fmt::print("Info string: {}", string);
         }
-        printf("\n");
 
         socket.close();
         break;
@@ -92,3 +107,22 @@ int asyncmain() {
 
     return 0;
 }
+
+struct Connection {
+    tcp::socket socket;
+    bool encryptionEnabled;
+    bool compressionEnabled;
+    int compressionThreshhold;
+    asio::error_code error;
+
+    std::vector<uint8_t> readPacket() {
+        std::vector<uint8_t> rawData{};
+        std::vector<uint8_t> packetData{};
+        int originalLen;
+        int compressedLen;
+        socket.read_some(asio::buffer(rawData), error);
+        auto iterator = rawData.cbegin();
+        originalLen = readVarint(iterator);
+        return packetData;
+    }
+};

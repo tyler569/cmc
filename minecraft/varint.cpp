@@ -16,6 +16,56 @@ void writeVarint(int value, std::vector<uint8_t> &v) {
     }
 }
 
+int readVarint(std::vector<uint8_t>::const_iterator &it) {
+    int value = 0;
+    int position = 0;
+    uint8_t currentByte;
+
+    while (true) {
+        currentByte = *it++;
+        value |= (currentByte & SEGMENT_BITS) << position;
+
+        if ((currentByte & CONTINUE_BIT) == 0) break;
+
+        position += 7;
+
+        if (position >= 32) throw InvalidVarint{};
+    }
+
+    return value;
+}
+
+void writeVarlong(long value, std::vector<uint8_t> &v) {
+    auto uvalue = static_cast<uint64_t>(value);
+    while (true) {
+        if ((uvalue & ~(long)SEGMENT_BITS) == 0) {
+            v.push_back(uvalue);
+            return;
+        }
+        v.push_back((uvalue & SEGMENT_BITS) | CONTINUE_BIT);
+        uvalue >>= 7;
+    }
+}
+
+long readVarlong(std::vector<uint8_t>::const_iterator &it) {
+    long value = 0;
+    int position = 0;
+    uint8_t currentByte;
+
+    while (true) {
+        currentByte = *it++;
+        value |= (currentByte & SEGMENT_BITS) << position;
+
+        if ((currentByte & CONTINUE_BIT) == 0) break;
+
+        position += 7;
+
+        if (position >= 64) throw InvalidVarint{};
+    }
+
+    return value;
+}
+
 void testVarint() {
     const auto testValue = [](int value) {
         std::vector<uint8_t> buffer;
@@ -27,7 +77,7 @@ void testVarint() {
         }
         printf("   ");
 
-        auto it = buffer.begin();
+        auto it = buffer.cbegin();
         printf("%i %i\n", readVarint(it), it == buffer.end());
     };
 

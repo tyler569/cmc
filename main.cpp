@@ -12,11 +12,13 @@
 #include "graphics/load_bmp.h"
 #include "graphics/load_shaders.h"
 #include "graphics/mesh.h"
+#include "minecraft/packet.h"
 #include "minecraft/connection.h"
 
 // one of each block / fake chunk
 #define TEXTURE_DEMO 0
-#define ASIO_TEST 0
+#define PACKET_TEST 0
+#define ASIO_TEST 1
 
 bool glfwStarted = false;
 
@@ -70,6 +72,11 @@ void generateMesh(Mesh &m) {
 }
 
 int main() {
+#if PACKET_TEST
+    testPacket();
+    return 0;
+#endif
+
 #if ASIO_TEST
     asyncmain();
     return 0;

@@ -8,28 +8,13 @@
 #define CONTINUE_BIT 0x80
 
 void writeVarint(int value, std::vector<uint8_t> &v);
+int readVarint(std::vector<uint8_t>::const_iterator &it);
+
+void writeVarlong(long value, std::vector<uint8_t> &v);
+long readVarlong(std::vector<uint8_t>::const_iterator &it);
 
 class InvalidVarint : std::exception {};
 
-template <std::input_iterator Iterator>
-int readVarint(Iterator &it) {
-    int value = 0;
-    int position = 0;
-    uint8_t currentByte;
-
-    while (true) {
-        currentByte = *it++;
-        value |= (currentByte & SEGMENT_BITS) << position;
-
-        if ((currentByte & CONTINUE_BIT) == 0) break;
-
-        position += 7;
-
-        if (position >= 32) throw InvalidVarint{};
-    }
-
-    return value;
-}
 
 void testVarint();
 

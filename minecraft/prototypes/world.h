@@ -3,7 +3,7 @@
 #include <optional>
 #include <unordered_map>
 
-#include "chunk.h"
+#include "minecraft/prototypes/chunk.h"
 
 struct World {
     std::unordered_map<std::tuple<int, int>, Chunk *> chunks;
